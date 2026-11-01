@@ -1,4 +1,4 @@
-# Bug Fix
+# Pink Ghost Added
 import pygame
 import sys
 import random
@@ -6,6 +6,7 @@ import threading
 import time
 from collections import deque
 
+# Colors
 BG = (30, 30, 30)
 WLL = (120, 120, 120)
 PLYR = (255, 255, 0)
@@ -13,9 +14,11 @@ R_GHST = (255, 0, 0)
 P_GHST = (255, 192, 203)
 B_GHST = (0, 0, 255)
 
+# Board Variables
 board_y = 29
 board_x = 28
 
+# Screen & Scaling Variables
 length = 10
 step = max(1, length // 10)
 gap = 4
@@ -26,17 +29,20 @@ scrn_x = board_x * length
 tab_y = board_y * (length + gap) + gap
 tab_x = board_x * (length + gap) + gap
 
+# Player Variables
 plyr = [0, 0]
 scrn = []
 old_drct = 0
-drct = 0  
-ghost = [] 
+drct = 0  # 3 = right, 6 = down, 9 = left, 12 = up
+ghost = [] # Red, Pink, Blue
 ghst_drct = []
 game_over = False
 
+# Timing
 ghst_start = 0
 difference = 5
 
+# Board - Maze Shape Initialization
 for y in range(scrn_y): 
     scrn.append([0] * scrn_x)
 for id in range(4): 
@@ -82,6 +88,7 @@ lock_blue = threading.Lock()
 def check(direction, cord):
     r_idx = cord[0] // length
     
+    # Allow tunnel wrapping at row 12
     if r_idx == 12:
         if direction == 9 and cord[1] <= 0: return True
         if direction == 3 and cord[1] >= (board_x - 1) * length: return True
@@ -102,9 +109,6 @@ def opposite_dir(d):
 def shortest_path(start_tile, target_tile):
     sr, sc = start_tile
     tr, tc = target_tile
-    tr = max(0, min(board_y - 1, tr))
-    tc = max(0, min(board_x - 1, tc))
-    
     if (sr, sc) == (tr, tc):
         return None
     
@@ -171,18 +175,19 @@ def draw(screen):
             Y = y + gap * (y//length)
             X = x + gap * (x//length)
 
-            if scrn[y][x] == 0: 
+            if scrn[y][x] == 0: # Empty
                 pygame.draw.rect(screen, BG, [X, Y, step, step], border_radius = 0)
-            if scrn[y][x] == 1: 
+            if scrn[y][x] == 1: # Wall
                 pygame.draw.rect(screen, WLL, [X, Y, step, step], border_radius = 0)
-            if scrn[y][x] == 2: 
+            if scrn[y][x] == 2: # Player
                 pygame.draw.rect(screen, PLYR, [X, Y, step, step], border_radius = 1)
-            if scrn[y][x] == 3: 
+            if scrn[y][x] == 3: # Red Ghost
                 pygame.draw.rect(screen, R_GHST, [X, Y, step, step], border_radius = 1)
-            if scrn[y][x] == 4: 
+            if scrn[y][x] == 4: # Pink Ghost
                 pygame.draw.rect(screen, P_GHST, [X, Y, step, step], border_radius = 1)
-            if scrn[y][x] == 5: 
+            if scrn[y][x] == 5: # Blue Ghost
                 pygame.draw.rect(screen, B_GHST, [X, Y, step, step], border_radius = 1)
+
 
 def closest():
     global old_drct, drct
@@ -291,6 +296,7 @@ def pink():
     
     cnt = 30
     id = 1
+    ahead = 4
 
     while not game_over:
         time.sleep(speed * 2)
@@ -318,28 +324,18 @@ def pink():
             
             if curr_d == 0 or not check(curr_d, ghost[id]) or is_intersection:
                 start_tile = [ghost[id][0] // length, ghost[id][1] // length]
-                base_target = [plyr[0] // length, plyr[1] // length]
+                target_tile = [plyr[0] // length, plyr[1] // length]
 
-                best_d = None
-                for ahead in [4, 3, 2, 1, 0]:
-                    target_tile = list(base_target)
-                    if drct == 3:
-                        target_tile[1] += ahead
-                    elif drct == 9:
-                        target_tile[1] -= ahead
-                    elif drct == 6:
-                        target_tile[0] += ahead
-                    elif drct == 12:
-                        target_tile[0] -= ahead
+                if drct == 3:
+                    target_tile[1] += ahead
+                elif drct == 9:
+                    target_tile[1] -= ahead
+                elif drct == 6:
+                    target_tile[0] += ahead
+                elif drct == 12:
+                    target_tile[0] -= ahead
 
-                    tr, tc = target_tile
-                    if 0 <= tr < board_y and 0 <= tc < board_x:
-                        best_d = shortest_path(start_tile, target_tile)
-                        if best_d is not None:
-                            break
-
-                if best_d is None:
-                    best_d = shortest_path(start_tile, base_target)
+                best_d = shortest_path(start_tile, target_tile)
 
                 forward_dirs = [d for d in all_valid_dirs if d != opp_d]
                 if best_d == opp_d and forward_dirs:
@@ -402,22 +398,22 @@ def blue():
             
             if curr_d == 0 or not check(curr_d, ghost[id]) or is_intersection:
                 start_tile = [ghost[id][0] // length, ghost[id][1] // length]
-                intermediate_tile = [plyr[0] // length, plyr[1] // length]
+                target_tile = [plyr[0] // length, plyr[1] // length]
 
                 if drct == 3:
-                    intermediate_tile[1] += ahead
+                    target_tile[1] += ahead
                 elif drct == 9:
-                    intermediate_tile[1] -= ahead
+                    target_tile[1] -= ahead
                 elif drct == 6:
-                    intermediate_tile[0] += ahead
+                    target_tile[0] += ahead
                 elif drct == 12:
-                    intermediate_tile[0] -= ahead
+                    target_tile[0] -= ahead
+                print(target_tile, end = '')
                 
-                red_tile = [ghost[0][0] // length, ghost[0][1] // length]
-                target_tile = [
-                    intermediate_tile[0] + (intermediate_tile[0] - red_tile[0]),
-                    intermediate_tile[1] + (intermediate_tile[1] - red_tile[1])
-                ]
+                target_tile[0] = start_tile[0] - (ghost[0][0]//length - target_tile[0])
+                target_tile[1] = start_tile[1] - (ghost[0][1]//length - target_tile[1])
+
+                print(ghost[0], target_tile)
 
                 best_d = shortest_path(start_tile, target_tile)
 
@@ -445,7 +441,6 @@ def blue():
                 elif curr_d == 6: ghost[id][0] += step
                 elif curr_d == 9: ghost[id][1] -= step
                 elif curr_d == 12: ghost[id][0] -= step
-            print(target_tile, ghost[0])
                 
             to_scrn(ghost[id], 5)
 
